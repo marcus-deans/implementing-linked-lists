@@ -86,6 +86,11 @@ impl<T> List<T> {
         Iter { next: self.head.as_deref() }
     }
     
+    //same as previously, just mutable
+    pub fn iter_mut(&mut self) -> IterMut<'_, T> {
+        IterMut { next: self.head.as_deref_mut() }
+    }
+
 }
 
 impl<T> Drop for List<T> {
@@ -221,6 +226,45 @@ Could give it a hinrt with 'turbofish'
     Then compiler knows that &node should have deref coercion applied
 */
 
+pub struct IterMut<'a, T> {
+    next: Option<&'a mut Node<T>>,
+}
+
+/*
+'next' signature previously had no constraints between lifetime of input & output
+    call next repeatedly, unconditionally
+fine for shared references -> but mutable refs are exclusive
+    need to consider how to write IterMut properly
+*/
+
+// implementing with List as previously
+
+/*
+Ownership does not apply for some type like Integers
+Integers marked as Copy -> perfectly copyable as bitwise copy
+    So old value still usable even when moved
+    Can move Copy type out of reference without replacement
+    
+    All numeric primitices are Copy (i32, u64, bool, char, ...)
+    User-defined types can be declared Copy -> if components are Copy
+
+    & is copy so Option<&> is also copy
+        So self.next.map just copied Option, and worked
+    &mut is NOT copy -> wouldn't be exclusive
+        So need to 'take' the option to get it
+*/
+impl<'a, T> Iterator for IterMut<'a, T> {
+    type Item = &'a mut T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.next.take().map(|node| {
+            self.next = node.next.as_deref_mut();
+            &mut node.elem
+        })
+    }
+}
+
+
 #[cfg(test)] //indicates to only compile 'test' when running tests
 mod test {
     //made new module -> need to pull List explicitly to use it
@@ -303,4 +347,16 @@ mod test {
         assert_eq!(iter.next(), Some(&2));
         assert_eq!(iter.next(), Some(&1));
     }
+
+    #[test]
+    fn iter_mut() {
+        let mut list = List::new();
+        list.push(1); list.push(2); list.push(3);
+
+        let mut iter = list.iter_mut();
+        assert_eq!(iter.next(), Some(&mut 3));
+        assert_eq!(iter.next(), Some(&mut 2));
+        assert_eq!(iter.next(), Some(&mut 1));
+    }
+
 }
