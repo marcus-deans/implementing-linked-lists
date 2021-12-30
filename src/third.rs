@@ -28,6 +28,11 @@ pub struct List<T> {
     head: Link<T>,
 }
 
+struct Node<T> {
+    elem: T,
+    next: Link<T>,
+}
+
 type Link<T> = Option<Rc<Node<T>>>;
 
 impl<T> List<T> {
@@ -58,22 +63,15 @@ impl<T> List<T> {
     pub fn head(&self) -> Option<&T> {
         self.head.as_ref().map(|node| &node.elem )
     }
-}
-
-struct Node<T> {
-    elem: T,
-    next: Link<T>,
+    
+    pub fn iter(&self) -> Iter<'_, T> {
+        Iter { next: self.head.as_deref() }
+    }
 }
 
 //Iter is identical to structure of mutable list
 pub struct Iter<'a, T> {
     next: Option<&'a Node<T>>,
-}
-
-impl<T> List<T> {
-    pub fn iter(&self) -> Iter<'_, T> {
-        Iter { next: self.head.as_deref() }
-    }
 }
 
 impl<'a, T> Iterator for Iter<'a, T> {
@@ -86,6 +84,7 @@ impl<'a, T> Iterator for Iter<'a, T> {
         })
     }
 }
+
 
 //Can't implement IntoIter or IterMut -> only have shared access to elements
 
@@ -118,7 +117,8 @@ Thread-safe requires atomic reference counces
 Use Arc for thread safety
     Same as Rc but with atomicity for reference counts -> overhead
 
-Simply replace every Rc referencewith Arc
+Simply replace every Rc reference with Arc
+    'Rc' -> 'std::sync::Arc'
 
 In generally, can't mess up thread-safety in Rust
     Thread-safety modeled with Send and Sync traits
@@ -175,7 +175,6 @@ mod test {
         // Make sure empty tail works
         let list = list.tail();
         assert_eq!(list.head(), None);
-
     }
 
     #[test]
