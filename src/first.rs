@@ -2,6 +2,45 @@ use std::mem;
 //put mem in local scope
 //mem::replace -> take value out of borrow by replacing with another value
 
+//create new namespace for testing file inline
+    //same way mod was used to include first.rs in lib.rs
+    //compile and run using 'cargo test'
+#[cfg(test)] //indicates to only compile 'test' when running tests
+mod test {
+    //made new module -> need to pull List explicitly to use it
+    use super::List;
+    
+    #[test] //testing annotation
+    fn basic(){
+        //assert_eq! macro
+        let mut list = List::new();
+
+        // Check empty list behaves right
+        assert_eq!(list.pop(), None);
+
+        // Populate list
+        list.push(1);
+        list.push(2);
+        list.push(3);
+
+        // Check normal removal
+        assert_eq!(list.pop(), Some(3));
+        assert_eq!(list.pop(), Some(2));
+
+        // Push some more just to make sure nothing's corrupted
+        list.push(4);
+        list.push(5);
+
+        // Check normal removal
+        assert_eq!(list.pop(), Some(5));
+        assert_eq!(list.pop(), Some(4));
+
+        // Check exhaustion
+        assert_eq!(list.pop(), Some(1));
+        assert_eq!(list.pop(), None);
+    }
+}
+
 //pub allows use of List outside this module
 pub enum List {
     head: Link,
@@ -73,4 +112,21 @@ impl List {
             //diverging function -> never return to caller
     }
 
+}
+
+//trait is term in Rust for interfaces
+    //if type implement type called 'Drop' -> rust uses destructor
+    //when it goes out of scope -> will use to clean up
+//write iterative drop for List manually -> hoist nodes out of boxes
+impl Drop for List {
+    fn drop(&mut self){
+        let mut cur_link = mem::replace(&mut self.head, Link::Empty);
+        // `while let` == "do this thing until this pattern doesn't match"
+        while let Link::More(mut boxed_node) = cur_link {
+            cur_link = mem::replace(&mut boxed_node.next, Link::Empty);
+            // boxed_node goes out of scope and gets dropped here;
+            // but its Node's `next` field has been set to Link::Empty
+            // so no unbounded recursion occurs.
+        }
+    }
 }
