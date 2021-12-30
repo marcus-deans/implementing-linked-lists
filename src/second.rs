@@ -1,24 +1,27 @@
 use std::mem;
 
-pub struct List {
-    head: Link,
+pub struct List<T> {
+    head: Link<T>,
 }
 
 // use type alias to save on typing
     //prior Link enum was just Option -> instead use Option's methods
-type Link = Option<Box<Node>>;
+type Link<T> = Option<Box<Node<T>>>;
 
-struct Node {
-    elem: i32,
-    next: Link,
+struct Node<T> {
+    elem: T,
+    next: Link<T>,
 }
 
-impl List {
+//since made definitions generic -> also need to implement generically
+impl<T> List<T> {
+    //don't write List<T> when creating List instance
+        //inferred since returning from function expecting List<T>
     pub fn new() -> Self {
         List { head: None }
     }
 
-    pub fn push(&mut self, elem: i32) {
+    pub fn push(&mut self, elem: T) {
         let new_node = Box::new(Node {
             elem: elem,
             //mem::replace(&mut option, None) very comon
@@ -37,12 +40,12 @@ impl List {
         //AND can refer to local variables outside closure
         self.head.take().map(|node| {
             self.head = node.next;
-            Some(node.elem)
+            node.elem
         })
     }
 }
 
-impl Drop for List {
+impl<T> Drop for List<T> {
     fn drop(&mut self) {
         let mut cur_link = self.head.take();
         while let Some(mut boxed_node) = cur_link {

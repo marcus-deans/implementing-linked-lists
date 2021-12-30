@@ -77,6 +77,10 @@ struct Node {
 //associate actual cod ewith type using impl
 //normal functions inside 'impl' are static
 impl List {
+    pub fn new() -> Self {
+        List { head: None }
+    }
+
     //Self is alias for type next to 'impl'
     //namespacing operator is :: -> use to refer to enum variants
     pub fn push(&mut self, elem: i32){
