@@ -70,12 +70,22 @@ impl<T> List<T> {
         IntoIter(self)
     }
 
-    // We declare a fresh lifetime here for the *exact* borrow that
-    // creates the iter. Now &self needs to be valid as long as the
-    // Iter is around.
+    /* We declare a fresh lifetime here for the *exact* borrow that
+    creates the iter. Now &self needs to be valid as long as the
+    Iter is around.
+
     pub fn iter<'a>(&'a self) -> Iter<'a, T> {
         Iter { next: self.head.as_derefer() }
     }
+
+     Lifetime elision actually applies here
+    Show that struct contains lifetime using 'explicitly elided lifetime'
+    Uses '_
+    */
+    pub fn iter(&self) -> Iter<'_, T> {
+        Iter { next: self.head.as_deref() }
+    }
+    
 }
 
 impl<T> Drop for List<T> {
@@ -192,7 +202,24 @@ impl<'a, T> Iterator for Iter<'a, T> {
     }
 }
 
+/*
+as_deref replaces map(|node| &**node)
+as_deref_mut replaces map(|node| &mut**node)
+Normally don't need to use -> Rust converts implicitly 
+    Uses 'deref coercion' -> inserting *'s inside to type-check
+    Uses borrow checker to avoid messing up pointers
+Complexity of closure with Option<&T> instead of &T requires it
 
+Could give it a hinrt with 'turbofish'
+    self.next = node.next.as_ref().map::<&Node<T>, _>(|node| &node);
+
+    map is generic function: pub fn map<U, F>(self, f: F) -> Option<U>
+
+    turbofish is ::<> lets us tell compiler what generic types should be
+        ::<&Node<T>, _> says it should return &Node<T> and something unknown
+    
+    Then compiler knows that &node should have deref coercion applied
+*/
 
 #[cfg(test)] //indicates to only compile 'test' when running tests
 mod test {
@@ -264,5 +291,16 @@ mod test {
         assert_eq!(iter.next(), Some(2));
         assert_eq!(iter.next(), Some(1));
         assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn iter() {
+        let mut list = List::new();
+        list.push(1); list.push(2); list.push(3);
+
+        let mut iter = list.iter();
+        assert_eq!(iter.next(), Some(&3));
+        assert_eq!(iter.next(), Some(&2));
+        assert_eq!(iter.next(), Some(&1));
     }
 }
